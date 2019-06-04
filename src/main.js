@@ -31,19 +31,16 @@ app.renderer.resize(window.innerWidth - 20, window.innerHeight - 20);
 //Add the canvas that Pixi automatically created for you to the HTML document
 document.body.appendChild(app.view);
 
+app.stage.interactive = false;
+
 //load an image and run the `setup` function when it's done
 loader
 .add("res/cat.png")
 .add("res/remera.png")
+.add("res/remera-2.png")
+.add("res/limit.png")
+.add("res/mask.jpg")
 .load(setup);
-
-var graphics = new PIXI.Graphics();
-graphics.lineStyle(2, 0x0000FF, 1);
-graphics.beginFill(0x50f442, 1);
-graphics.drawRect(100, 100, 300, 300);
-
-//app.stage.addChild(graphics);
-//app.stage.mask = graphics;
 
 app.stage.sortableChildren = true;
 
@@ -51,52 +48,71 @@ app.stage.sortableChildren = true;
 function setup() {
 	//Create the cat sprite
 	let bicho = new Sprite(resources["res/cat.png"].texture);
-	let puerta = new Sprite(resources["res/remera.png"].texture);
+	let remera = new Sprite(resources["res/remera-2.png"].texture);
+	let limit = new Sprite(resources["res/limit.png"].texture);
+	let mask = new Sprite(resources["res/mask.jpg"].texture);
 	
-	initSprite(bicho);
-	initSprite(puerta);
+	//Uso esta remera para resizear la remera-2, porque el limite esta hecho en base al tamaño del original.
+	let remera2 = new Sprite(resources["res/remera.png"].texture);
+	remera2.scale.set(0.5,0.5);
+
+	let aspectRatio = remera.width / remera.height;
+	remera.width = remera2.width;
+	remera.height = remera.width / aspectRatio;
+
+	/*
+	console.log( "width: " + remera.width + " height: " + remera.height);
+	console.log( "width/height: " + remera.width/remera.height + "height/width " + remera.height/remera.width )
 	
-	//bicho.x = app.renderer.width / 2 - bicho.width/2;
-	//bicho.y = app.renderer.height / 2 - bicho.height/2;
-
-	bicho.x = 110;
-	bicho.y = 110;
+	console.log( "width: " + remera2.width + " height: " + remera2.height);
+	console.log( "width/height: " + remera2.width/remera2.height + "height/width " + remera2.height/remera2.width )
+*/
+	makeDraggable(bicho);
 	
-	bicho.anchor.x = 0.5;
-	bicho.anchor.y = 0.5;
-	
-	//Rotar(bicho,0.1);
+	limit.scale.set(0.5,0.5);
+	//remera.scale.set(0.5,0.5);
+	mask.scale.set(0.5,0.5);
 
-	bicho.rotar = true;
+	remera.width = remera2.width;
+	remera.height = remera2.height;
 
-	app.stage.removeChild(bicho);
-	var container = new PIXI.Container();
-	container.addChild(bicho);
-	container.mask = graphics;
+	//Posiciono la remera en el centro
+	setInCenter(remera);
+	setInCenter(limit);
+	setInCenter(mask);
+	setInCenter(bicho);
 
-	app.stage.addChild(container);
+	app.stage.addChild(remera);
+	app.stage.addChild(limit);
+	//Hay que agregar la mask al stage para que tome las posiciones....
+	app.stage.addChild(mask);
+	app.stage.addChild(bicho);
 
-	app.ticker.add( delta => collisionBehavior(bicho,puerta) );
+	bicho.mask = mask;
+	bicho.mask.scale.set(0.5,0.5);
+	setInCenter(bicho.mask);
+
+	/*let collection = new PIXI.Container();
+	collection.addChild(bicho);
+	collection.mask = mask;
+
+	app.stage.addChild(collection);*/
+
+	app.ticker.add( delta => collisionBehavior(bicho,remera) );
+}
+
+function setInCenter(element){
+	element.position.x = app.renderer.width / 2 - element.width/2;
+	element.position.y = app.renderer.height / 2 - element.height/2;
 }
 
 function collisionBehavior(sp1, sp2){
 	if ( hitTestRectangle(sp1,sp2) )
-		console.log("Collision!!!");
+		;//console.log("Collision!!!");
 }
 
-function Rotar(bicho, timeout){
-	setTimeout( ()=> {
-		if(bicho.rotar){
-			bicho.rotation += 0.01;
-		}
-		Rotar(bicho,timeout);
-	} , timeout);
-}
-
-function initSprite(sprite)
+function makeDraggable(sprite)
 {
-	sprite.rotar = false;
-
 	//Add event handlers
 	sprite.interactive = true;
 	sprite.clicked = false;
@@ -104,9 +120,6 @@ function initSprite(sprite)
 	sprite.on("mouseup", onEndDrag );
 	sprite.on("mouseupoutside", onEndDrag);
 	sprite.on("mousemove", onDragMove );
-
-	//Add to stage
-	app.stage.addChild(sprite);
 }
 
 function onStartDrag(event)
@@ -115,7 +128,6 @@ function onStartDrag(event)
 	this.clicked = true;
 	this.eventData = event.data;
 	this.oldPos = this.eventData.getLocalPosition(this.parent);
-	this.rotar = false;
 }
 
 function onEndDrag(event)
@@ -123,8 +135,6 @@ function onEndDrag(event)
 	this.zIndex = 0;
 	this.clicked = false;
 	this.eventData = null;
-
-	this.rotar = true;
 }
 
 function onDragMove(event)
