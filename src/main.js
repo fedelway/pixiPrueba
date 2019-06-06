@@ -44,10 +44,13 @@ loader
 
 app.stage.sortableChildren = true;
 
+var meridian = new PIXI.Rectangle(app.renderer.width/2,0,1,app.renderer.height);
+
 //This `setup` function will run when the image has loaded
 function setup() {
 	//Create the cat sprite
 	let bicho = new Sprite(resources["res/cat.png"].texture);
+	let bicho2 = new Sprite(resources["res/cat.png"].texture);
 	let remera = new Sprite(resources["res/remera-2.png"].texture);
 	let limit = new Sprite(resources["res/limit.png"].texture);
 	let mask = new Sprite(resources["res/mask.jpg"].texture);
@@ -67,8 +70,6 @@ function setup() {
 	console.log( "width: " + remera2.width + " height: " + remera2.height);
 	console.log( "width/height: " + remera2.width/remera2.height + "height/width " + remera2.height/remera2.width )
 */
-	makeDraggable(bicho);
-	
 	limit.scale.set(0.5,0.5);
 	//remera.scale.set(0.5,0.5);
 	mask.scale.set(0.5,0.5);
@@ -81,16 +82,30 @@ function setup() {
 	setInCenter(limit);
 	setInCenter(mask);
 	setInCenter(bicho);
+	setInCenter(bicho2);
 
 	app.stage.addChild(remera);
 	app.stage.addChild(limit);
 	//Hay que agregar la mask al stage para que tome las posiciones....
 	app.stage.addChild(mask);
 	app.stage.addChild(bicho);
+	//app.stage.addChild(bicho2);
 
 	bicho.mask = mask;
-	bicho.mask.scale.set(0.5,0.5);
-	setInCenter(bicho.mask);
+	bicho2.mask = mask;
+
+	bicho.magnetArea = 8;
+	bicho.center = new PIXI.Point(bicho.x + bicho.width/2 ,bicho.y + bicho.height /2);
+
+	makeDraggable(bicho);
+	//makeDraggable(bicho2);
+
+
+	let graphics = new PIXI.Graphics();
+	graphics.beginFill(0xFFFF00);
+	graphics.lineStyle(1,0xFF0000);
+	graphics.drawPolygon(new PIXI.Polygon(app.renderer.width/2,0,app.renderer.width/2,app.renderer.height));
+	app.stage.addChild(graphics);
 
 	/*let collection = new PIXI.Container();
 	collection.addChild(bicho);
@@ -98,12 +113,28 @@ function setup() {
 
 	app.stage.addChild(collection);*/
 
-	app.ticker.add( delta => collisionBehavior(bicho,remera) );
+	app.ticker.add( delta => renderLoop(delta) );
+}
+
+//This function executes FPS times per second.
+function renderLoop(delta){
+	//collisionPointRect(bicho,meridian);
 }
 
 function setInCenter(element){
 	element.position.x = app.renderer.width / 2 - element.width/2;
 	element.position.y = app.renderer.height / 2 - element.height/2;
+}
+
+function collisionPointRect(sprite, line){
+
+	let recX = sprite.x + sprite.width/2 - sprite.magnetArea/2;
+	let recY = sprite.y + sprite.height/2 - sprite.magnetArea/2;
+
+	let rec = new PIXI.Rectangle( recX,recY,sprite.magnetArea,sprite.magnetArea);
+
+	if( hitTestRect(rec,line) )
+		;//console.log("Paso por el medio");
 }
 
 function collisionBehavior(sp1, sp2){
@@ -140,12 +171,37 @@ function onEndDrag(event)
 function onDragMove(event)
 {
 	if(this.clicked){
-		var newPos = this.eventData.getLocalPosition(this.parent);
-	
-		this.position.x += newPos.x - this.oldPos.x;
-		this.position.y += newPos.y - this.oldPos.y;
 
-		this.oldPos = newPos;
+		var newPos = this.eventData.getLocalPosition(this.parent);
+
+		let deltaX = newPos.x - this.oldPos.x;
+		let deltaY = newPos.x - this.oldPos.y;
+		
+		//Lock X-Axis on center
+		let recX = this.x + deltaX + this.width/2 - this.magnetArea/2;
+		let recY = this.y + deltaY + this.height/2 - this.magnetArea/2;
+	
+		let rec = new PIXI.Rectangle( recX,recY,this.magnetArea,this.magnetArea);
+		//Don't Lock if Shift-key is pressed
+		if( hitTestRect(rec,meridian) && !pkeys[16] ){ 
+			console.log("Collision");
+			this.position.x = meridian.x - this.width/2;
+			deltaX = 0;
+		}
+		else deltaX = newPos.x - this.oldPos.x;
+
+		deltaY = newPos.y - this.oldPos.y;
+
+		//Apply movement
+		this.position.x += deltaX;
+		this.position.y += deltaY;
+
+		this.center.x += deltaX;
+		this.center.y += deltaY;
+
+		// Old Position is the old position plus the delta. This to avoid having to move the 
+		// mouse pointer too far away from the center
+		this.oldPos = new PIXI.Point(this.oldPos.x + deltaX, this.oldPos.y+deltaY);
 	}
 }
 
@@ -155,4 +211,18 @@ function hitTestRectangle(r1, r2) {
 	var ab = r1.getBounds();
 	var bb = r2.getBounds();
 	return ab.x + ab.width > bb.x && ab.x < bb.x + bb.width && ab.y + ab.height > bb.y && ab.y < bb.y + bb.height;
+};
+
+function hitTestRect(ab, bb) {
+	return ab.x + ab.width > bb.x && ab.x < bb.x + bb.width && ab.y + ab.height > bb.y && ab.y < bb.y + bb.height;
+};
+
+var pkeys=[];
+window.onkeydown = function (e) {
+    var code = e.keyCode ? e.keyCode : e.which;
+    pkeys[code]=true;
+}
+window.onkeyup = function (e) {
+  var code = e.keyCode ? e.keyCode : e.which;
+  pkeys[code]=false;
 };
