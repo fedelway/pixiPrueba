@@ -5,6 +5,13 @@ if(!PIXI.utils.isWebGLSupported()){
 
 PIXI.utils.sayHello(type)
 
+//Global objects
+var mask;
+var selectedSprite;
+
+//Configuration
+var resizeAmmount = 1;
+
 //Create aliases
 let Application = PIXI.Application,
     loader = PIXI.loader,
@@ -40,24 +47,47 @@ loader
 .add("res/remera-2.png")
 .add("res/limit.png")
 .add("res/mask.jpg")
+.add("res/buttonLoad.png")
+.add("res/buttonSizeUp.png")
+.add("res/buttonSizeDown.png")
 .load(setup);
 
 app.stage.sortableChildren = true;
 
 var meridian = new PIXI.Rectangle(app.renderer.width/2,0,1,app.renderer.height);
 
-//This `setup` function will run when the image has loaded
+document.getElementById('fileInput').hidden = true;
+document.getElementById('fileInput').addEventListener('change', handleFileSelect, false);
+function handleFileSelect(evt) {
+	let reader = new FileReader();
+	reader.onabort = function(e) {
+		alert('File read cancelled');
+	};
+	reader.onerror = ev => console.error(ev);
+	reader.onload = function(e) {
+		let tex = PIXI.Texture.from(reader.result);
+		let newSprite = new PIXI.Sprite(tex);
+		resizeWidth(newSprite, 200);
+		setInCenter(newSprite);
+		makeDraggable(newSprite);
+		newSprite.mask = mask;
+		app.stage.addChild(newSprite);
+	};
+	// Read in the image file as a binary string.
+	reader.readAsDataURL(evt.target.files[0]);
+}
+
+//This `setup` function will run when the images have loaded
 function setup() {
 	//Create the cat sprite
 	let bicho = new Sprite(resources["res/cat.png"].texture);
-	let bicho2 = new Sprite(resources["res/cat.png"].texture);
 	let remera = new Sprite(resources["res/remera-2.png"].texture);
 	let limit = new Sprite(resources["res/limit.png"].texture);
-	let mask = new Sprite(resources["res/mask.jpg"].texture);
+	mask = new Sprite(resources["res/mask.jpg"].texture);
 	
 	//Uso esta remera para resizear la remera-2, porque el limite esta hecho en base al tamaño del original.
 	let remera2 = new Sprite(resources["res/remera.png"].texture);
-	remera2.scale.set(0.5,0.5);
+	remera2.scale.set(0.8,0.8);
 
 	let aspectRatio = remera.width / remera.height;
 	remera.width = remera2.width;
@@ -70,9 +100,8 @@ function setup() {
 	console.log( "width: " + remera2.width + " height: " + remera2.height);
 	console.log( "width/height: " + remera2.width/remera2.height + "height/width " + remera2.height/remera2.width )
 */
-	limit.scale.set(0.5,0.5);
-	//remera.scale.set(0.5,0.5);
-	mask.scale.set(0.5,0.5);
+	limit.scale.set(0.8,0.8);
+	mask.scale.set(0.8,0.8);
 
 	remera.width = remera2.width;
 	remera.height = remera2.height;
@@ -82,38 +111,69 @@ function setup() {
 	setInCenter(limit);
 	setInCenter(mask);
 	setInCenter(bicho);
-	setInCenter(bicho2);
 
 	app.stage.addChild(remera);
 	app.stage.addChild(limit);
 	//Hay que agregar la mask al stage para que tome las posiciones....
 	app.stage.addChild(mask);
-	app.stage.addChild(bicho);
-	//app.stage.addChild(bicho2);
+	//app.stage.addChild(bicho);
 
 	bicho.mask = mask;
-	bicho2.mask = mask;
-
-	bicho.magnetArea = 8;
-	bicho.center = new PIXI.Point(bicho.x + bicho.width/2 ,bicho.y + bicho.height /2);
-
 	makeDraggable(bicho);
-	//makeDraggable(bicho2);
-
 
 	let graphics = new PIXI.Graphics();
 	graphics.beginFill(0xFFFF00);
 	graphics.lineStyle(1,0xFF0000);
 	graphics.drawPolygon(new PIXI.Polygon(app.renderer.width/2,0,app.renderer.width/2,app.renderer.height));
-	app.stage.addChild(graphics);
+	app.stage.addChild(graphics);	
 
-	/*let collection = new PIXI.Container();
-	collection.addChild(bicho);
-	collection.mask = mask;
-
-	app.stage.addChild(collection);*/
+	addButtons([
+		{
+			textureName: "res/buttonLoad.png",
+			setEvents: sprite => {
+				sprite.pointertap = e => document.getElementById('fileInput').click()
+			}
+		},
+		{
+			textureName: "res/buttonSizeUp.png",
+			setEvents: sprite => {
+				sprite.pointertap = e => {
+					if(selectedSprite){
+						selectedSprite.height+= resizeAmmount; selectedSprite.width+= resizeAmmount;
+					}
+				};
+			}
+		},
+		{
+			textureName: "res/buttonSizeDown.png",
+			setEvents: sprite => {
+				sprite.pointertap = e => {
+					if(selectedSprite){
+						selectedSprite.height-=resizeAmmount ; selectedSprite.width-= resizeAmmount;
+					}
+				}
+			}
+		}
+	]);
 
 	app.ticker.add( delta => renderLoop(delta) );
+}
+
+function addButtons(textureArray){
+
+	let totalX = 0;
+	textureArray.forEach( tex => {
+		let newButton = new Sprite(resources[tex.textureName].texture);
+		newButton.x = totalX;
+		totalX += newButton.width;
+		newButton.y = app.renderer.height - newButton.height;
+		newButton.interactive = true;
+		newButton.buttonMode = true;
+
+		tex.setEvents(newButton);
+
+		app.stage.addChild(newButton);
+	});
 }
 
 //This function executes FPS times per second.
@@ -151,6 +211,9 @@ function makeDraggable(sprite)
 	sprite.on("mouseup", onEndDrag );
 	sprite.on("mouseupoutside", onEndDrag);
 	sprite.on("mousemove", onDragMove );
+
+	sprite.magnetArea = 8;
+	sprite.center = new PIXI.Point(sprite.x + sprite.width/2 ,sprite.y + sprite.height /2);
 }
 
 function onStartDrag(event)
@@ -159,6 +222,7 @@ function onStartDrag(event)
 	this.clicked = true;
 	this.eventData = event.data;
 	this.oldPos = this.eventData.getLocalPosition(this.parent);
+	selectedSprite = this;
 }
 
 function onEndDrag(event)
@@ -205,9 +269,25 @@ function onDragMove(event)
 	}
 }
 
+//Resizing functions keeping Aspect Ratio
+function resizeHeight(img, newHeight){
+	let aspectRatio = getAspectRatio(img);
+	img.height = newHeight;
+	img.width = aspectRatio * newHeight;
+}
+
+function resizeWidth(img, newWidth){
+	let aspectRatio = getAspectRatio(img);
+	img.width = newWidth;
+	img.height = newWidth / aspectRatio;
+}
+
+function getAspectRatio(img){
+	return img.width / img.height;
+}
+
 //Simple collision detection
 function hitTestRectangle(r1, r2) {
-
 	var ab = r1.getBounds();
 	var bb = r2.getBounds();
 	return ab.x + ab.width > bb.x && ab.x < bb.x + bb.width && ab.y + ab.height > bb.y && ab.y < bb.y + bb.height;
