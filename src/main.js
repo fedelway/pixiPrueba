@@ -10,12 +10,12 @@ var mask;
 var selectedSprite;
 
 //Configuration
-var resizeAmmount = 1;
+var resizeAmmount = 10;
 
 //Create aliases
 let Application = PIXI.Application,
-    loader = PIXI.loader,
-    resources = PIXI.loader.resources,
+    loader = PIXI.Loader.shared,
+    resources = PIXI.Loader.shared.resources,
     Sprite = PIXI.Sprite;
 
 //Create a Pixi Application
@@ -39,6 +39,8 @@ app.renderer.resize(window.innerWidth - 20, window.innerHeight - 20);
 document.body.appendChild(app.view);
 
 app.stage.interactive = false;
+app.stage.sortableChildren = true;
+app.stage.maxZ = 0;
 
 //load an image and run the `setup` function when it's done
 loader
@@ -50,9 +52,8 @@ loader
 .add("res/buttonLoad.png")
 .add("res/buttonSizeUp.png")
 .add("res/buttonSizeDown.png")
+.add("res/buttonDelete.png")
 .load(setup);
-
-app.stage.sortableChildren = true;
 
 var meridian = new PIXI.Rectangle(app.renderer.width/2,0,1,app.renderer.height);
 
@@ -63,21 +64,29 @@ function handleFileSelect(evt) {
 	reader.onabort = function(e) {
 		alert('File read cancelled');
 	};
-	reader.onerror = ev => console.error(ev);
+	reader.onerror = ev => alert(ev);
 	reader.onload = function(e) {
-		let tex = PIXI.Texture.from(reader.result);
-		let newSprite = new PIXI.Sprite(tex);
-		resizeWidth(newSprite, 200);
-		setInCenter(newSprite);
-		makeDraggable(newSprite);
-		newSprite.mask = mask;
-		app.stage.addChild(newSprite);
+		//Create a loader so it notifies when the loading has finished
+		newLoader = new PIXI.Loader();
+		newLoader.add(reader.result)
+		.load( () => {
+			let newSprite = new PIXI.Sprite(newLoader.resources[reader.result].texture);
+			resizeHeight(newSprite, 200);
+			setInCenter(newSprite);
+			makeDraggable(newSprite);
+			newSprite.zIndex = app.stage.maxZ;
+			newSprite.mask = mask;
+			app.stage.addChild(newSprite);
+		});
 	};
 	// Read in the image file as a binary string.
 	reader.readAsDataURL(evt.target.files[0]);
+
+	//Chrome only fires the event if the file selected is different, so just empty the value to upload same multiple times.
+	document.getElementById('fileInput').value = '';
 }
 
-//This `setup` function will run when the images have loaded
+//This 'setup' function will run when the images have loaded
 function setup() {
 	//Create the cat sprite
 	let bicho = new Sprite(resources["res/cat.png"].texture);
@@ -87,21 +96,13 @@ function setup() {
 	
 	//Uso esta remera para resizear la remera-2, porque el limite esta hecho en base al tamaño del original.
 	let remera2 = new Sprite(resources["res/remera.png"].texture);
-	remera2.scale.set(0.8,0.8);
+	//remera2.scale.set(0.9,0.9);
+	//limit.scale.set(0.9,0.9);
+	//mask.scale.set(0.9,0.9);
 
 	let aspectRatio = remera.width / remera.height;
 	remera.width = remera2.width;
 	remera.height = remera.width / aspectRatio;
-
-	/*
-	console.log( "width: " + remera.width + " height: " + remera.height);
-	console.log( "width/height: " + remera.width/remera.height + "height/width " + remera.height/remera.width )
-	
-	console.log( "width: " + remera2.width + " height: " + remera2.height);
-	console.log( "width/height: " + remera2.width/remera2.height + "height/width " + remera2.height/remera2.width )
-*/
-	limit.scale.set(0.8,0.8);
-	mask.scale.set(0.8,0.8);
 
 	remera.width = remera2.width;
 	remera.height = remera2.height;
@@ -122,7 +123,7 @@ function setup() {
 	makeDraggable(bicho);
 
 	let graphics = new PIXI.Graphics();
-	graphics.beginFill(0xFFFF00);
+	graphics.beginFill(0xFF0000);
 	graphics.lineStyle(1,0xFF0000);
 	graphics.drawPolygon(new PIXI.Polygon(app.renderer.width/2,0,app.renderer.width/2,app.renderer.height));
 	app.stage.addChild(graphics);	
@@ -139,7 +140,8 @@ function setup() {
 			setEvents: sprite => {
 				sprite.pointertap = e => {
 					if(selectedSprite){
-						selectedSprite.height+= resizeAmmount; selectedSprite.width+= resizeAmmount;
+						resizeHeight(selectedSprite,selectedSprite.height + resizeAmmount);
+						//selectedSprite.height+= resizeAmmount; selectedSprite.width+= resizeAmmount;
 					}
 				};
 			}
@@ -149,7 +151,18 @@ function setup() {
 			setEvents: sprite => {
 				sprite.pointertap = e => {
 					if(selectedSprite){
-						selectedSprite.height-=resizeAmmount ; selectedSprite.width-= resizeAmmount;
+						resizeHeight(selectedSprite,selectedSprite.height - resizeAmmount);
+						//selectedSprite.height-=resizeAmmount ; selectedSprite.width-= resizeAmmount;
+					}
+				}
+			}
+		},
+		{
+			textureName: "res/buttonDelete.png",
+			setEvents: sprite => {
+				sprite.pointertap = e => {
+					if(selectedSprite){
+						app.stage.removeChild(selectedSprite);
 					}
 				}
 			}
@@ -218,7 +231,10 @@ function makeDraggable(sprite)
 
 function onStartDrag(event)
 {
-	this.zIndex = 1;
+	let newZIndex = Math.max( app.stage.children.length, app.stage.maxZ ) + 1;
+	this.zIndex = newZIndex;
+	app.stage.maxZ = newZIndex;
+	app.stage.sortDirty = true;
 	this.clicked = true;
 	this.eventData = event.data;
 	this.oldPos = this.eventData.getLocalPosition(this.parent);
@@ -227,7 +243,7 @@ function onStartDrag(event)
 
 function onEndDrag(event)
 {
-	this.zIndex = 0;
+	//this.zIndex = 0;
 	this.clicked = false;
 	this.eventData = null;
 }
