@@ -11,6 +11,7 @@ var selectedSprite;
 
 //Configuration
 var resizeAmmount = 10;
+var bigMovementAmmount = 10;
 
 //Create aliases
 let Application = PIXI.Application,
@@ -53,6 +54,7 @@ loader
 .add("res/buttonSizeUp.png")
 .add("res/buttonSizeDown.png")
 .add("res/buttonDelete.png")
+.add("res/buttonRestoreAspectRatio.png")
 .load(setup);
 
 var meridian = new PIXI.Rectangle(app.renderer.width/2,0,1,app.renderer.height);
@@ -76,7 +78,9 @@ function handleFileSelect(evt) {
 			makeDraggable(newSprite);
 			newSprite.zIndex = app.stage.maxZ;
 			newSprite.mask = mask;
+			newSprite.originalAspectRatio = getAspectRatio(newSprite);
 			app.stage.addChild(newSprite);
+			selectedSprite = newSprite;
 		});
 	};
 	// Read in the image file as a binary string.
@@ -163,6 +167,17 @@ function setup() {
 				sprite.pointertap = e => {
 					if(selectedSprite){
 						app.stage.removeChild(selectedSprite);
+					}
+				}
+			}
+		},
+		{
+			textureName: "res/buttonRestoreAspectRatio.png",
+			setEvents: sprite => {
+				sprite.pointertap = e => {
+					if(selectedSprite){
+						//Change width to restore original aspect ratio
+						selectedSprite.width = selectedSprite.originalAspectRatio * selectedSprite.height;
 					}
 				}
 			}
@@ -313,12 +328,66 @@ function hitTestRect(ab, bb) {
 	return ab.x + ab.width > bb.x && ab.x < bb.x + bb.width && ab.y + ab.height > bb.y && ab.y < bb.y + bb.height;
 };
 
+//Key Presses
+var keyEvents = [];
+keyEvents['ArrowUp'] = ()=>{
+	if(selectedSprite){
+		let movementAmmount = 1;
+		if(pressedKeys['Control'])
+			movementAmmount = bigMovementAmmount;
+		if(pressedKeys['Shift'])
+			selectedSprite.height += movementAmmount;
+		else
+			selectedSprite.y-= movementAmmount;
+	}
+};
+keyEvents['ArrowDown'] = ()=>{
+	if(selectedSprite){
+		let movementAmmount = 1;
+		if(pressedKeys['Control'])
+			movementAmmount = bigMovementAmmount;
+		if(pressedKeys['Shift'])
+			selectedSprite.height-=movementAmmount;
+		else
+			selectedSprite.y+= movementAmmount;
+	}
+};
+keyEvents['ArrowLeft'] = ()=>{
+	if(selectedSprite){
+		let movementAmmount = 1;
+		if(pressedKeys['Control'])
+			movementAmmount = bigMovementAmmount;
+		if(pressedKeys['Shift'])
+			selectedSprite.width-=movementAmmount;
+		else
+			selectedSprite.x-= movementAmmount;
+	}
+};
+keyEvents['ArrowRight'] = ()=>{
+	if(selectedSprite){
+		let movementAmmount = 1;
+		if(pressedKeys['Control'])
+			movementAmmount = bigMovementAmmount;
+		if(pressedKeys['Shift'])
+			selectedSprite.width+=movementAmmount;
+		else
+			selectedSprite.x+= movementAmmount;
+	}
+};
 var pkeys=[];
+var pressedKeys = [];
 window.onkeydown = function (e) {
+	console.log(e);
     var code = e.keyCode ? e.keyCode : e.which;
-    pkeys[code]=true;
+	pkeys[code]=true;
+	pressedKeys[e.key] = true;
+	//Trigger event if present
+	let event = keyEvents[e.key];
+	if(event)
+		event();
 }
 window.onkeyup = function (e) {
   var code = e.keyCode ? e.keyCode : e.which;
   pkeys[code]=false;
+  pressedKeys[e.key] = false;
 };
