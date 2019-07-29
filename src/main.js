@@ -8,6 +8,7 @@ PIXI.utils.sayHello(type)
 //Global objects
 var mask;
 var selectedSprite;
+var limit; //Area to draw
 
 //Configuration
 var resizeAmmount = 10;
@@ -55,6 +56,7 @@ loader
 .add("res/buttonSizeDown.png")
 .add("res/buttonDelete.png")
 .add("res/buttonRestoreAspectRatio.png")
+.add("res/buttonRemoveBorder.png")
 .load(setup);
 
 var meridian = new PIXI.Rectangle(app.renderer.width/2,0,1,app.renderer.height);
@@ -95,7 +97,7 @@ function setup() {
 	//Create the cat sprite
 	let bicho = new Sprite(resources["res/cat.png"].texture);
 	let remera = new Sprite(resources["res/remera-2.png"].texture);
-	let limit = new Sprite(resources["res/limit.png"].texture);
+	limit = new Sprite(resources["res/limit.png"].texture);
 	mask = new Sprite(resources["res/mask.jpg"].texture);
 	
 	//Uso esta remera para resizear la remera-2, porque el limite esta hecho en base al tamaño del original.
@@ -179,6 +181,16 @@ function setup() {
 						//Change width to restore original aspect ratio
 						selectedSprite.width = selectedSprite.originalAspectRatio * selectedSprite.height;
 					}
+				}
+			}
+		},
+		{
+			textureName: "res/buttonRemoveBorder.png",
+			setEvents: sprite => {
+				sprite.pointertap = e=> {
+					if(app.stage.children.includes(limit))
+						app.stage.removeChild(limit);
+					else app.stage.addChild(limit);
 				}
 			}
 		}
