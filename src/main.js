@@ -10,6 +10,7 @@ var mask;
 var selectedSprite;
 var limit; //Area to draw
 var middleLine;
+var horizontalLine;
 
 //Configuration
 var config = {
@@ -64,6 +65,7 @@ loader
 .load(setup);
 
 var meridian = new PIXI.Rectangle(app.renderer.width/2,0,1,app.renderer.height);
+var horizontal;
 
 document.getElementById('fileInput').hidden = true;
 document.getElementById('fileInput').addEventListener('change', handleFileSelect, false);
@@ -132,10 +134,17 @@ function setup() {
 	bicho.mask = mask;
 	makeDraggable(bicho);
 
-	middleLine = createDashedLine();
+	middleLine = createDashedLine(new PIXI.Point(app.renderer.width/2,0), new PIXI.Point(app.renderer.width/2,app.renderer.height));
 	middleLine.visible = false;
 	middleLine.zIndex = 999999;
 	app.stage.addChild(middleLine);
+
+	//Estos valores estan hardcodeados, deberían estan bien hechos con respecto a la mask
+	horizontal = new PIXI.Rectangle(0,mask.y + mask.height*0.415,app.renderer.width,1);
+	horizontalLine = createDashedLine(new PIXI.Point(0,mask.y + mask.height*0.415), new PIXI.Point(app.renderer.width,mask.y + mask.height*0.415));
+	horizontalLine.visible = false;
+	horizontalLine.zIndex = 999999;
+	app.stage.addChild(horizontalLine);
 
 	addButtons([
 		{
@@ -278,6 +287,7 @@ function onEndDrag(event)
 	this.eventData = null;
 
 	middleLine.visible = false;
+	horizontalLine.visible = false;
 }
 
 function onDragMove(event)
@@ -287,7 +297,7 @@ function onDragMove(event)
 		var newPos = this.eventData.getLocalPosition(this.parent);
 
 		let deltaX = newPos.x - this.oldPos.x;
-		let deltaY = newPos.x - this.oldPos.y;
+		let deltaY = newPos.y - this.oldPos.y;
 		
 		//Lock X-Axis on center
 		let recX = this.x + deltaX + this.width/2 - this.magnetArea/2;
@@ -296,7 +306,7 @@ function onDragMove(event)
 		let rec = new PIXI.Rectangle( recX,recY,this.magnetArea,this.magnetArea);
 		//Don't Lock if Shift-key is pressed
 		if( hitTestRect(rec,meridian) && !pkeys[16] ){ 
-			console.log("Collision");
+			console.log("Vertical Collision");
 			middleLine.visible = true;
 			this.position.x = meridian.x - this.width/2;
 			deltaX = 0;
@@ -305,8 +315,17 @@ function onDragMove(event)
 			deltaX = newPos.x - this.oldPos.x;
 			middleLine.visible = false;
 		}
-
-		deltaY = newPos.y - this.oldPos.y;
+		console.log(rec);
+		console.log(horizontal);
+		if( hitTestRect(rec,horizontal) && !pkeys[16] ){
+			console.log("Horizontal Collision");
+			horizontalLine.visible = true;
+			this.position.y = horizontal.y - this.height/2;
+			deltaY = 0;
+		}else{
+			deltaY = newPos.y - this.oldPos.y;
+			horizontalLine.visible = false;
+		}
 
 		//Apply movement
 		this.position.x += deltaX;
@@ -321,20 +340,26 @@ function onDragMove(event)
 	}
 }
 
-function createDashedLine(){
-	var g = new PIXI.Graphics();
+function createDashedLine(startPoint, endPoint){
+	let start = new Vector(startPoint.x,startPoint.y);
+	let end = new Vector(endPoint.x,endPoint.y);
+
+	let g = new PIXI.Graphics();
 	g.beginFill(0xFF0000);
 	g.lineStyle(1,0xFF0000);
 
 	let lineLength = 10;
 	let gap = 5;
-	
-	let x = app.renderer.width/2;
-	let y = 0;
 
-	while(y<app.renderer.height){
-		g.drawPolygon(x,y,x,y+lineLength);
-		y+= lineLength + gap;
+	let direction = end.subtract(start).unit(); //unit = normalize
+	let drawnLength = 0;
+	let totalLength = end.subtract(start).length();
+
+	while(drawnLength < totalLength){
+		let newStart = start.add(direction.multiply(lineLength));
+		g.drawPolygon([new PIXI.Point(start.x,start.y),new PIXI.Point(newStart.x,newStart.y)]);
+		start = newStart.add(direction.multiply(gap));
+		drawnLength += lineLength + gap;
 	}
 
 	return g;
