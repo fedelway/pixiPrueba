@@ -9,10 +9,14 @@ PIXI.utils.sayHello(type)
 var mask;
 var selectedSprite;
 var limit; //Area to draw
+var middleLine;
 
 //Configuration
-var resizeAmmount = 10;
-var bigMovementAmmount = 10;
+var config = {
+	resizeAmmount: 10,
+	bigMovementAmmount: 10,
+	scaling: 0.9
+}
 
 //Create aliases
 let Application = PIXI.Application,
@@ -102,9 +106,9 @@ function setup() {
 	
 	//Uso esta remera para resizear la remera-2, porque el limite esta hecho en base al tamaño del original.
 	let remera2 = new Sprite(resources["res/remera.png"].texture);
-	//remera2.scale.set(0.9,0.9);
-	//limit.scale.set(0.9,0.9);
-	//mask.scale.set(0.9,0.9);
+	remera2.scale.set(config.scaling,config.scaling);
+	limit.scale.set(config.scaling,config.scaling);
+	mask.scale.set(config.scaling,config.scaling);
 
 	let aspectRatio = remera.width / remera.height;
 	remera.width = remera2.width;
@@ -128,11 +132,10 @@ function setup() {
 	bicho.mask = mask;
 	makeDraggable(bicho);
 
-	let graphics = new PIXI.Graphics();
-	graphics.beginFill(0xFF0000);
-	graphics.lineStyle(1,0xFF0000);
-	graphics.drawPolygon(new PIXI.Polygon(app.renderer.width/2,0,app.renderer.width/2,app.renderer.height));
-	app.stage.addChild(graphics);	
+	middleLine = createDashedLine();
+	middleLine.visible = false;
+	middleLine.zIndex = 999999;
+	app.stage.addChild(middleLine);
 
 	addButtons([
 		{
@@ -273,6 +276,8 @@ function onEndDrag(event)
 	//this.zIndex = 0;
 	this.clicked = false;
 	this.eventData = null;
+
+	middleLine.visible = false;
 }
 
 function onDragMove(event)
@@ -292,10 +297,14 @@ function onDragMove(event)
 		//Don't Lock if Shift-key is pressed
 		if( hitTestRect(rec,meridian) && !pkeys[16] ){ 
 			console.log("Collision");
+			middleLine.visible = true;
 			this.position.x = meridian.x - this.width/2;
 			deltaX = 0;
 		}
-		else deltaX = newPos.x - this.oldPos.x;
+		else {
+			deltaX = newPos.x - this.oldPos.x;
+			middleLine.visible = false;
+		}
 
 		deltaY = newPos.y - this.oldPos.y;
 
@@ -310,6 +319,25 @@ function onDragMove(event)
 		// mouse pointer too far away from the center
 		this.oldPos = new PIXI.Point(this.oldPos.x + deltaX, this.oldPos.y+deltaY);
 	}
+}
+
+function createDashedLine(){
+	var g = new PIXI.Graphics();
+	g.beginFill(0xFF0000);
+	g.lineStyle(1,0xFF0000);
+
+	let lineLength = 10;
+	let gap = 5;
+	
+	let x = app.renderer.width/2;
+	let y = 0;
+
+	while(y<app.renderer.height){
+		g.drawPolygon(x,y,x,y+lineLength);
+		y+= lineLength + gap;
+	}
+
+	return g;
 }
 
 //Resizing functions keeping Aspect Ratio
@@ -346,9 +374,9 @@ keyEvents['ArrowUp'] = ()=>{
 	if(selectedSprite){
 		let movementAmmount = 1;
 		if(pressedKeys['Control'])
-			movementAmmount = bigMovementAmmount;
+			movementAmmount = config.bigMovementAmmount;
 		if(pressedKeys['Shift'])
-			selectedSprite.height += movementAmmount;
+			selectedSprite.height -= movementAmmount;
 		else
 			selectedSprite.y-= movementAmmount;
 	}
@@ -357,9 +385,9 @@ keyEvents['ArrowDown'] = ()=>{
 	if(selectedSprite){
 		let movementAmmount = 1;
 		if(pressedKeys['Control'])
-			movementAmmount = bigMovementAmmount;
+			movementAmmount = config.bigMovementAmmount;
 		if(pressedKeys['Shift'])
-			selectedSprite.height-=movementAmmount;
+			selectedSprite.height+=movementAmmount;
 		else
 			selectedSprite.y+= movementAmmount;
 	}
@@ -368,7 +396,7 @@ keyEvents['ArrowLeft'] = ()=>{
 	if(selectedSprite){
 		let movementAmmount = 1;
 		if(pressedKeys['Control'])
-			movementAmmount = bigMovementAmmount;
+			movementAmmount = config.bigMovementAmmount;
 		if(pressedKeys['Shift'])
 			selectedSprite.width-=movementAmmount;
 		else
@@ -379,7 +407,7 @@ keyEvents['ArrowRight'] = ()=>{
 	if(selectedSprite){
 		let movementAmmount = 1;
 		if(pressedKeys['Control'])
-			movementAmmount = bigMovementAmmount;
+			movementAmmount = config.bigMovementAmmount;
 		if(pressedKeys['Shift'])
 			selectedSprite.width+=movementAmmount;
 		else
