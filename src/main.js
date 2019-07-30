@@ -149,7 +149,7 @@ function setup() {
 			setEvents: sprite => {
 				sprite.pointertap = e => {
 					if(selectedSprite){
-						resizeHeight(selectedSprite,selectedSprite.height + resizeAmmount);
+						resizeHeight(selectedSprite,selectedSprite.height + config.resizeAmmount);
 						//selectedSprite.height+= resizeAmmount; selectedSprite.width+= resizeAmmount;
 					}
 				};
@@ -160,7 +160,7 @@ function setup() {
 			setEvents: sprite => {
 				sprite.pointertap = e => {
 					if(selectedSprite){
-						resizeHeight(selectedSprite,selectedSprite.height - resizeAmmount);
+						resizeHeight(selectedSprite,selectedSprite.height - config.resizeAmmount);
 						//selectedSprite.height-=resizeAmmount ; selectedSprite.width-= resizeAmmount;
 					}
 				}
