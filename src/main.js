@@ -3,6 +3,9 @@ if(!PIXI.utils.isWebGLSupported()){
   type = "canvas"
 }
 
+//So pixiDevTools can find PIXI
+window.PIXI = PIXI;
+
 PIXI.utils.sayHello(type)
 
 //Global objects
@@ -11,6 +14,7 @@ var selectedSprite;
 var limit; //Area to draw
 var middleLine;
 var horizontalLine;
+var userImages;
 
 //Configuration
 var config = {
@@ -23,7 +27,8 @@ var config = {
 let Application = PIXI.Application,
     loader = PIXI.Loader.shared,
     resources = PIXI.Loader.shared.resources,
-    Sprite = PIXI.Sprite;
+	Sprite = PIXI.Sprite,
+	Point = PIXI.Point;
 
 //Create a Pixi Application
 let app = new PIXI.Application({ 
@@ -49,7 +54,7 @@ app.stage.interactive = false;
 app.stage.sortableChildren = true;
 app.stage.maxZ = 0;
 
-//load an image and run the `setup` function when it's done
+//load resources asynchronously and execute setup when done
 loader
 .add("res/cat.png")
 .add("res/remera.png")
@@ -62,6 +67,7 @@ loader
 .add("res/buttonDelete.png")
 .add("res/buttonRestoreAspectRatio.png")
 .add("res/buttonRemoveBorder.png")
+.add("res/buttonGenerateRender.png")
 .load(setup);
 
 var meridian = new PIXI.Rectangle(app.renderer.width/2,0,1,app.renderer.height);
@@ -85,23 +91,34 @@ function handleFileSelect(evt) {
 			setInCenter(newSprite);
 			makeDraggable(newSprite);
 			newSprite.zIndex = app.stage.maxZ;
-			newSprite.mask = mask;
+			//newSprite.mask = mask;
+			newSprite.originalData = {
+				aspectRatio: getAspectRatio(newSprite),
+				width: newSprite.width,
+				height: newSprite.height
+			}
 			newSprite.originalAspectRatio = getAspectRatio(newSprite);
-			app.stage.addChild(newSprite);
+
+			//For debugging position
+			newSprite.interactive = true;
+			newSprite.on('pointerover', (e) =>{
+				console.log(e.data.global);
+			});
+
+			userImages.addChild(newSprite);
 			selectedSprite = newSprite;
 		});
 	};
 	// Read in the image file as a binary string.
 	reader.readAsDataURL(evt.target.files[0]);
 
-	//Chrome only fires the event if the file selected is different, so just empty the value to upload same multiple times.
+	//Chrome only fires the event if the file selected is different, so just empty the value to upload same pic multiple times.
 	document.getElementById('fileInput').value = '';
 }
 
 //This 'setup' function will run when the images have loaded
 function setup() {
 	//Create the cat sprite
-	let bicho = new Sprite(resources["res/cat.png"].texture);
 	let remera = new Sprite(resources["res/remera-2.png"].texture);
 	limit = new Sprite(resources["res/limit.png"].texture);
 	mask = new Sprite(resources["res/mask.jpg"].texture);
@@ -123,16 +140,11 @@ function setup() {
 	setInCenter(remera);
 	setInCenter(limit);
 	setInCenter(mask);
-	setInCenter(bicho);
 
 	app.stage.addChild(remera);
 	app.stage.addChild(limit);
 	//Hay que agregar la mask al stage para que tome las posiciones....
 	app.stage.addChild(mask);
-	//app.stage.addChild(bicho);
-
-	bicho.mask = mask;
-	makeDraggable(bicho);
 
 	middleLine = createDashedLine(new PIXI.Point(app.renderer.width/2,0), new PIXI.Point(app.renderer.width/2,app.renderer.height));
 	middleLine.visible = false;
@@ -145,6 +157,12 @@ function setup() {
 	horizontalLine.visible = false;
 	horizontalLine.zIndex = 999999;
 	app.stage.addChild(horizontalLine);
+
+	userImages = new PIXI.Container();
+	userImages.interactive = false;
+	userImages.sortableChildren = true;
+	userImages.mask = mask;
+	app.stage.addChild(userImages);
 
 	addButtons([
 		{
@@ -159,7 +177,6 @@ function setup() {
 				sprite.pointertap = e => {
 					if(selectedSprite){
 						resizeHeight(selectedSprite,selectedSprite.height + config.resizeAmmount);
-						//selectedSprite.height+= resizeAmmount; selectedSprite.width+= resizeAmmount;
 					}
 				};
 			}
@@ -170,7 +187,6 @@ function setup() {
 				sprite.pointertap = e => {
 					if(selectedSprite){
 						resizeHeight(selectedSprite,selectedSprite.height - config.resizeAmmount);
-						//selectedSprite.height-=resizeAmmount ; selectedSprite.width-= resizeAmmount;
 					}
 				}
 			}
@@ -180,7 +196,7 @@ function setup() {
 			setEvents: sprite => {
 				sprite.pointertap = e => {
 					if(selectedSprite){
-						app.stage.removeChild(selectedSprite);
+						userImages.removeChild(selectedSprite);
 					}
 				}
 			}
@@ -190,8 +206,10 @@ function setup() {
 			setEvents: sprite => {
 				sprite.pointertap = e => {
 					if(selectedSprite){
-						//Change width to restore original aspect ratio
-						selectedSprite.width = selectedSprite.originalAspectRatio * selectedSprite.height;
+						//Change width or height to restore aspect ratio
+						if(selectedSprite.height > selectedSprite.width)
+							selectedSprite.width = selectedSprite.originalData.aspectRatio * selectedSprite.height;
+						else selectedSprite.height = selectedSprite.width / selectedSprite.originalData.aspectRatio;
 					}
 				}
 			}
@@ -203,6 +221,14 @@ function setup() {
 					if(app.stage.children.includes(limit))
 						app.stage.removeChild(limit);
 					else app.stage.addChild(limit);
+				}
+			}
+		},
+		{
+			textureName: "res/buttonGenerateRender.png",
+			setEvents: sprite => {
+				sprite.pointertap = e => {
+					exportRender();
 				}
 			}
 		}
@@ -315,8 +341,6 @@ function onDragMove(event)
 			deltaX = newPos.x - this.oldPos.x;
 			middleLine.visible = false;
 		}
-		console.log(rec);
-		console.log(horizontal);
 		if( hitTestRect(rec,horizontal) && !pkeys[16] ){
 			console.log("Horizontal Collision");
 			horizontalLine.visible = true;
@@ -340,6 +364,112 @@ function onDragMove(event)
 	}
 }
 
+//Scaling not working yet...
+function exportRenderExperimental(){
+	console.log('Export render');
+	userImages.mask = null;
+	//Position obtained through debugging. TODO: get this data from mask.
+	let positionHardCoded = new Point(518,314);
+	
+	console.log(userImages.transform);
+	console.log(mask.transform);
+
+	let userImagesOriginalPos = userImages.position.clone();
+	let maskOriginalPos = mask.position.clone();
+
+	//Move everything to be rendered at origin
+	let maskPosition = mask.position.clone();
+	maskPosition = positionHardCoded;
+
+	userImages.position = new Point(0,0);
+	mask.position = new Point(-positionHardCoded.x,-positionHardCoded.y);
+	userImages.scale.x*=3.63;
+	userImages.scale.y*=3.63;
+	mask.scale.x*=3.63;
+	mask.scale.y*=3.63;
+
+	app.render();
+
+	userImages.position = new Point(userImagesOriginalPos.x-positionHardCoded.x,userImagesOriginalPos.y-positionHardCoded.y);
+	mask.position = new Point(maskOriginalPos.x-positionHardCoded.x*3.63,maskOriginalPos.y-positionHardCoded.y*3.63);
+	//userImages.x -= positionHardCoded.x;
+	//userImages.y -= positionHardCoded.y;
+	//mask.x-=positionHardCoded.x;
+	//mask.y-=positionHardCoded.y;
+
+	console.log(userImages.position);
+	console.log(userImages.children[0].width);
+	console.log(userImages.children[0].height);
+	console.log(mask.position);
+	console.log(mask.width);
+	console.log(mask.height);
+
+
+	userImages.mask = null;
+	//Render to texture so masking can be applied
+	let renderTexture = PIXI.RenderTexture.create(800, 600);
+	app.render(); //We need this to apply position updates
+	app.renderer.render(userImages,renderTexture);
+	
+	userImages.position = new Point(0,0);
+	mask.position = new Point(0,0);
+	userImages.scale.x *= 0.275;
+	userImages.scale.y *= 0.275;
+	mask.scale.x *= 0.275;
+	mask.scale.y *= 0.275;
+
+	userImages.x = userImagesOriginalPos.x;
+	userImages.y = userImagesOriginalPos.y;
+	mask.position.x = maskOriginalPos.x;
+	mask.position.y = maskOriginalPos.y;
+
+	let exportSprite = new Sprite(renderTexture);
+	document.body.appendChild(app.renderer.plugins.extract.image(exportSprite));
+	
+	console.log(userImages.transform);
+	console.log(mask.transform);
+
+	//userImages.x += maskPosition.x;
+	//userImages.y += maskPosition.y;
+	//mask.x += maskPosition.x;
+	//mask.y += maskPosition.y;
+}
+
+function exportRender(){
+	console.log('Export render');
+
+	//Position obtained through debugging. TODO: get this data from mask.
+	let positionHardCoded = new Point(518,314);
+
+	let userImagesOriginalPos = userImages.position.clone();
+	let maskOriginalPos = mask.position.clone();
+
+	//Move everything to be rendered at origin
+	let maskPosition = mask.position.clone();
+	maskPosition = positionHardCoded;
+
+	userImages.position = new Point(userImagesOriginalPos.x-positionHardCoded.x,userImagesOriginalPos.y-positionHardCoded.y);
+	mask.position = new Point(maskOriginalPos.x-positionHardCoded.x,maskOriginalPos.y-positionHardCoded.y);
+	
+	//Render to texture so masking can be applied
+	let renderTexture = PIXI.RenderTexture.create(800, 600);
+	app.render(); //We need this to apply position updates
+	app.renderer.render(userImages,renderTexture);
+
+	userImages.x = userImagesOriginalPos.x;
+	userImages.y = userImagesOriginalPos.y;
+	mask.position.x = maskOriginalPos.x;
+	mask.position.y = maskOriginalPos.y;
+
+	let exportSprite = new Sprite(renderTexture);
+	document.body.appendChild(app.renderer.plugins.extract.image(exportSprite));
+
+	//userImages.x += maskPosition.x;
+	//userImages.y += maskPosition.y;
+	//mask.x += maskPosition.x;
+	//mask.y += maskPosition.y;
+}
+
 function createDashedLine(startPoint, endPoint){
 	let start = new Vector(startPoint.x,startPoint.y);
 	let end = new Vector(endPoint.x,endPoint.y);
@@ -357,7 +487,7 @@ function createDashedLine(startPoint, endPoint){
 
 	while(drawnLength < totalLength){
 		let newStart = start.add(direction.multiply(lineLength));
-		g.drawPolygon([new PIXI.Point(start.x,start.y),new PIXI.Point(newStart.x,newStart.y)]);
+		g.drawPolygon([new Point(start.x,start.y),new Point(newStart.x,newStart.y)]);
 		start = newStart.add(direction.multiply(gap));
 		drawnLength += lineLength + gap;
 	}
