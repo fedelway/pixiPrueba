@@ -9,3 +9,4 @@ Editor de remeras hecho con pixi.
   - npm install -g http-server
   - http-server
 - Otra opción es levantar index.html con chrome con el flag --allow-file-access-from-files
+- También funciona directamente con edge.
