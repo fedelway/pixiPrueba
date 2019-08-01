@@ -120,13 +120,12 @@ function handleFileSelect(evt) {
 function setup() {
 	//Create the sprites
 	let remera = new Sprite(resources["res/remera-2.png"].texture);
-	limit = new Sprite(resources["res/limit.png"].texture);
-	mask = new Sprite(resources["res/mask.jpg"].texture);
 
 	//Create the limit: a square dashedLine
 	let sideLength = 348;
 	limit = new PIXI.Graphics();
 	limit.width = sideLength; limit.height = sideLength;
+	limit.originalSideLength = sideLength;
 	limit.lineStyle(3,0x000000);
 	DrawDashedLine(limit,new Point(0,0),new Point(sideLength,0));
 	DrawDashedLine(limit,new Point(sideLength, 0), new Point(sideLength, sideLength));
@@ -375,20 +374,58 @@ function onDragMove(event)
 	}
 }
 
-//Scaling not working yet...
+//Scaling now working!!!!
 function exportRenderExperimental(){
 	console.log('Export render');
 
 	let resolution = {width: 800, height: 800}
-	//Position obtained through debugging. TODO: get this data from mask.
-	let positionHardCoded = new Point(518,314);
+	// res / ScaledLimitSide
+	let xScaling = resolution.width / (limit.originalSideLength * config.scaling);
+	let yScaling = resolution.height / (limit.originalSideLength * config.scaling);
+
+	let originalParameters = {
+		xScaling: userImages.scale.x,
+		yScaling: userImages.scale.y,
+		pos: userImages.position.clone()
+	}
+
+	userImages.mask = null;
+	mask.visible = false;
 	
 	let newMask = new PIXI.Graphics();
 	newMask.beginFill(0x000000,1); //Solid Black
 	newMask.drawRect(0,0,resolution.width,resolution.height);
 	newMask.endFill();
 
+	//Move everything to origin, so masking can be applied there
+	userImages.x -= limit.getGlobalPosition().x;
+	userImages.y -= limit.getGlobalPosition().y;
 
+	let bkpPos = userImages.position.clone();
+
+	//Scaling at the origin
+	userImages.position = new Point(0,0);
+	userImages.scale.x *= xScaling;
+	userImages.scale.y *= yScaling;
+
+	userImages.x = bkpPos.x*xScaling;
+	userImages.y = bkpPos.y*yScaling;
+
+	userImages.mask = newMask;
+
+	//Render to texture so masking can be applied
+	let renderTexture = PIXI.RenderTexture.create(resolution.width,resolution.height);
+	app.render(); //We need this to apply transform updates
+	app.renderer.render(userImages,renderTexture);
+
+	let exportSprite = new Sprite(renderTexture);
+	document.body.appendChild(app.renderer.plugins.extract.image(exportSprite));
+
+	//Now we need to leave everything as it was
+	userImages.position = originalParameters.pos;
+	userImages.scale.set(originalParameters.xScaling,originalParameters.yScaling);
+	userImages.mask = mask;
+	mask.visible = true;
 }
 
 function exportRender(){
