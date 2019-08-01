@@ -116,6 +116,8 @@ function handleFileSelect(evt) {
 	document.getElementById('fileInput').value = '';
 }
 
+document.getElementById('download_render').hidden = true;
+
 //This 'setup' function will run when the images have loaded
 function setup() {
 	//Create the sprites
@@ -237,8 +239,7 @@ function setup() {
 			textureName: "res/buttonGenerateRender.png",
 			setEvents: sprite => {
 				sprite.pointertap = e => {
-					//exportRender();
-					exportRenderExperimental();
+					exportRender();
 				}
 			}
 		}
@@ -375,7 +376,7 @@ function onDragMove(event)
 }
 
 //Scaling now working!!!!
-function exportRenderExperimental(){
+function exportRender(){
 	console.log('Export render');
 
 	let resolution = {width: 800, height: 800}
@@ -419,48 +420,18 @@ function exportRenderExperimental(){
 	app.renderer.render(userImages,renderTexture);
 
 	let exportSprite = new Sprite(renderTexture);
-	document.body.appendChild(app.renderer.plugins.extract.image(exportSprite));
+	let b64 = app.renderer.plugins.extract.base64(exportSprite);
 
 	//Now we need to leave everything as it was
 	userImages.position = originalParameters.pos;
 	userImages.scale.set(originalParameters.xScaling,originalParameters.yScaling);
 	userImages.mask = mask;
 	mask.visible = true;
-}
 
-function exportRender(){
-	console.log('Export render');
-
-	//Position obtained through debugging. TODO: get this data from mask.
-	let positionHardCoded = new Point(518,314);
-
-	let userImagesOriginalPos = userImages.position.clone();
-	let maskOriginalPos = mask.position.clone();
-
-	//Move everything to be rendered at origin
-	let maskPosition = mask.position.clone();
-	maskPosition = positionHardCoded;
-
-	userImages.position = new Point(userImagesOriginalPos.x-positionHardCoded.x,userImagesOriginalPos.y-positionHardCoded.y);
-	mask.position = new Point(maskOriginalPos.x-positionHardCoded.x,maskOriginalPos.y-positionHardCoded.y);
-	
-	//Render to texture so masking can be applied
-	let renderTexture = PIXI.RenderTexture.create(800, 600);
-	app.render(); //We need this to apply position updates
-	app.renderer.render(userImages,renderTexture);
-
-	userImages.x = userImagesOriginalPos.x;
-	userImages.y = userImagesOriginalPos.y;
-	mask.position.x = maskOriginalPos.x;
-	mask.position.y = maskOriginalPos.y;
-
-	let exportSprite = new Sprite(renderTexture);
-	document.body.appendChild(app.renderer.plugins.extract.image(exportSprite));
-
-	//userImages.x += maskPosition.x;
-	//userImages.y += maskPosition.y;
-	//mask.x += maskPosition.x;
-	//mask.y += maskPosition.y;
+	//Download the generated image
+	let element = document.getElementById('download_render');
+	element.href = b64;
+	element.click();
 }
 
 // Draws dashed line given a PIXI.Graphics object
