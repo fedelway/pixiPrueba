@@ -75,47 +75,6 @@ var horizontal;
 
 document.getElementById('fileInput').hidden = true;
 document.getElementById('fileInput').addEventListener('change', handleFileSelect, false);
-function handleFileSelect(evt) {
-	let reader = new FileReader();
-	reader.onabort = function(e) {
-		alert('File read cancelled');
-	};
-	reader.onerror = ev => alert(ev);
-	reader.onload = function(e) {
-		//Create a loader so it notifies when the loading has finished
-		newLoader = new PIXI.Loader();
-		newLoader.add(reader.result)
-		.load( () => {
-			let newSprite = new PIXI.Sprite(newLoader.resources[reader.result].texture);
-			resizeHeight(newSprite, 200);
-			setInCenter(newSprite);
-			makeDraggable(newSprite);
-			newSprite.zIndex = app.stage.maxZ;
-			//newSprite.mask = mask;
-			newSprite.originalData = {
-				aspectRatio: getAspectRatio(newSprite),
-				width: newSprite.width,
-				height: newSprite.height
-			}
-			newSprite.originalAspectRatio = getAspectRatio(newSprite);
-
-			//For debugging position
-			newSprite.interactive = true;
-			newSprite.on('pointerover', (e) =>{
-				console.log(e.data.global);
-			});
-
-			userImages.addChild(newSprite);
-			selectedSprite = newSprite;
-		});
-	};
-	// Read in the image file as a binary string.
-	reader.readAsDataURL(evt.target.files[0]);
-
-	//Chrome only fires the event if the file selected is different, so just empty the value to upload same pic multiple times.
-	document.getElementById('fileInput').value = '';
-}
-
 document.getElementById('download_render').hidden = true;
 
 //This 'setup' function will run when the images have loaded
@@ -432,6 +391,48 @@ function exportRender(){
 	let element = document.getElementById('download_render');
 	element.href = b64;
 	element.click();
+}
+
+// Triggered when the user presses the Load Image button
+function handleFileSelect(evt) {
+	let reader = new FileReader();
+	reader.onabort = function(e) {
+		alert('File read cancelled');
+	};
+	reader.onerror = ev => alert(ev);
+	reader.onload = function(e) {
+		//Create a loader so it notifies when the loading has finished
+		newLoader = new PIXI.Loader();
+		newLoader.add(reader.result)
+		.load( () => {
+			let newSprite = new PIXI.Sprite(newLoader.resources[reader.result].texture);
+			resizeHeight(newSprite, 200);
+			setInCenter(newSprite);
+			makeDraggable(newSprite);
+			newSprite.zIndex = app.stage.maxZ;
+			//newSprite.mask = mask;
+			newSprite.originalData = {
+				aspectRatio: getAspectRatio(newSprite),
+				width: newSprite.width,
+				height: newSprite.height
+			}
+			newSprite.originalAspectRatio = getAspectRatio(newSprite);
+
+			//For debugging position
+			newSprite.interactive = true;
+			newSprite.on('pointerover', (e) =>{
+				console.log(e.data.global);
+			});
+
+			userImages.addChild(newSprite);
+			selectedSprite = newSprite;
+		});
+	};
+	// Read in the image file as a binary string.
+	reader.readAsDataURL(evt.target.files[0]);
+
+	//Chrome only fires the event if the file selected is different, so just empty the value to upload same pic multiple times.
+	document.getElementById('fileInput').value = '';
 }
 
 // Draws dashed line given a PIXI.Graphics object
