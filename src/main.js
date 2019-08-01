@@ -20,7 +20,7 @@ var userImages;
 var config = {
 	resizeAmmount: 10,
 	bigMovementAmmount: 10,
-	scaling: 0.9
+	scaling: 0.9 * 0.63
 }
 
 //Create aliases
@@ -118,42 +118,54 @@ function handleFileSelect(evt) {
 
 //This 'setup' function will run when the images have loaded
 function setup() {
-	//Create the cat sprite
+	//Create the sprites
 	let remera = new Sprite(resources["res/remera-2.png"].texture);
 	limit = new Sprite(resources["res/limit.png"].texture);
 	mask = new Sprite(resources["res/mask.jpg"].texture);
-	
-	//Uso esta remera para resizear la remera-2, porque el limite esta hecho en base al tamaño del original.
-	let remera2 = new Sprite(resources["res/remera.png"].texture);
-	remera2.scale.set(config.scaling,config.scaling);
-	limit.scale.set(config.scaling,config.scaling);
-	mask.scale.set(config.scaling,config.scaling);
 
-	let aspectRatio = remera.width / remera.height;
-	remera.width = remera2.width;
-	remera.height = remera.width / aspectRatio;
+	//Create the limit: a square dashedLine
+	let sideLength = 348;
+	limit = new PIXI.Graphics();
+	limit.width = sideLength; limit.height = sideLength;
+	limit.lineStyle(3,0x000000);
+	DrawDashedLine(limit,new Point(0,0),new Point(sideLength,0));
+	DrawDashedLine(limit,new Point(sideLength, 0), new Point(sideLength, sideLength));
+	DrawDashedLine(limit,new Point(sideLength, sideLength), new Point(0,sideLength));
+	DrawDashedLine(limit,new Point(0,sideLength), new Point(0,0));
 
-	remera.width = remera2.width;
-	remera.height = remera2.height;
+	//Position the limit on the shirt (values hardcoded)
+	limit.position = new Point(269,250);
+
+	//Create the mask
+	mask = new PIXI.Graphics();
+	mask.width = sideLength; mask.height = sideLength;
+	mask.beginFill(0x000000,1);
+	mask.drawRect(0,0,sideLength,sideLength);
+	mask.endFill();
+	mask.position = limit.position;
+
+	let maskedRemera = new PIXI.Container();
+	maskedRemera.addChild(remera);
+	maskedRemera.addChild(limit);
+	maskedRemera.addChild(mask);
+	//Apply scaling
+	maskedRemera.scale.set(config.scaling,config.scaling);
 
 	//Posiciono la remera en el centro
-	setInCenter(remera);
-	setInCenter(limit);
-	setInCenter(mask);
+	setInCenter(maskedRemera);
 
-	app.stage.addChild(remera);
-	app.stage.addChild(limit);
-	//Hay que agregar la mask al stage para que tome las posiciones....
-	app.stage.addChild(mask);
+	app.stage.addChild(maskedRemera);
 
-	middleLine = createDashedLine(new PIXI.Point(app.renderer.width/2,0), new PIXI.Point(app.renderer.width/2,app.renderer.height));
+	middleLine = createDashedLine(new PIXI.Point(app.renderer.width/2,0), new PIXI.Point(app.renderer.width/2,app.renderer.height),1,0xFF0000);
 	middleLine.visible = false;
 	middleLine.zIndex = 999999;
 	app.stage.addChild(middleLine);
 
-	//Estos valores estan hardcodeados, deberían estan bien hechos con respecto a la mask
-	horizontal = new PIXI.Rectangle(0,mask.y + mask.height*0.415,app.renderer.width,1);
-	horizontalLine = createDashedLine(new PIXI.Point(0,mask.y + mask.height*0.415), new PIXI.Point(app.renderer.width,mask.y + mask.height*0.415));
+	//Obtain the y position of the middle of the limit
+	let limitPos = limit.getGlobalPosition();
+	horizontalY = limitPos.y + sideLength * config.scaling / 2;
+	horizontal = new PIXI.Rectangle(0,horizontalY,app.renderer.width,1);
+	horizontalLine = createDashedLine(new PIXI.Point(0,horizontalY), new PIXI.Point(app.renderer.width,horizontalY),1, 0xFF0000);
 	horizontalLine.visible = false;
 	horizontalLine.zIndex = 999999;
 	app.stage.addChild(horizontalLine);
@@ -218,9 +230,7 @@ function setup() {
 			textureName: "res/buttonRemoveBorder.png",
 			setEvents: sprite => {
 				sprite.pointertap = e=> {
-					if(app.stage.children.includes(limit))
-						app.stage.removeChild(limit);
-					else app.stage.addChild(limit);
+					limit.visible = !limit.visible;
 				}
 			}
 		},
@@ -228,7 +238,8 @@ function setup() {
 			textureName: "res/buttonGenerateRender.png",
 			setEvents: sprite => {
 				sprite.pointertap = e => {
-					exportRender();
+					//exportRender();
+					exportRenderExperimental();
 				}
 			}
 		}
@@ -367,72 +378,17 @@ function onDragMove(event)
 //Scaling not working yet...
 function exportRenderExperimental(){
 	console.log('Export render');
-	userImages.mask = null;
+
+	let resolution = {width: 800, height: 800}
 	//Position obtained through debugging. TODO: get this data from mask.
 	let positionHardCoded = new Point(518,314);
 	
-	console.log(userImages.transform);
-	console.log(mask.transform);
-
-	let userImagesOriginalPos = userImages.position.clone();
-	let maskOriginalPos = mask.position.clone();
-
-	//Move everything to be rendered at origin
-	let maskPosition = mask.position.clone();
-	maskPosition = positionHardCoded;
-
-	userImages.position = new Point(0,0);
-	mask.position = new Point(-positionHardCoded.x,-positionHardCoded.y);
-	userImages.scale.x*=3.63;
-	userImages.scale.y*=3.63;
-	mask.scale.x*=3.63;
-	mask.scale.y*=3.63;
-
-	app.render();
-
-	userImages.position = new Point(userImagesOriginalPos.x-positionHardCoded.x,userImagesOriginalPos.y-positionHardCoded.y);
-	mask.position = new Point(maskOriginalPos.x-positionHardCoded.x*3.63,maskOriginalPos.y-positionHardCoded.y*3.63);
-	//userImages.x -= positionHardCoded.x;
-	//userImages.y -= positionHardCoded.y;
-	//mask.x-=positionHardCoded.x;
-	//mask.y-=positionHardCoded.y;
-
-	console.log(userImages.position);
-	console.log(userImages.children[0].width);
-	console.log(userImages.children[0].height);
-	console.log(mask.position);
-	console.log(mask.width);
-	console.log(mask.height);
+	let newMask = new PIXI.Graphics();
+	newMask.beginFill(0x000000,1); //Solid Black
+	newMask.drawRect(0,0,resolution.width,resolution.height);
+	newMask.endFill();
 
 
-	userImages.mask = null;
-	//Render to texture so masking can be applied
-	let renderTexture = PIXI.RenderTexture.create(800, 600);
-	app.render(); //We need this to apply position updates
-	app.renderer.render(userImages,renderTexture);
-	
-	userImages.position = new Point(0,0);
-	mask.position = new Point(0,0);
-	userImages.scale.x *= 0.275;
-	userImages.scale.y *= 0.275;
-	mask.scale.x *= 0.275;
-	mask.scale.y *= 0.275;
-
-	userImages.x = userImagesOriginalPos.x;
-	userImages.y = userImagesOriginalPos.y;
-	mask.position.x = maskOriginalPos.x;
-	mask.position.y = maskOriginalPos.y;
-
-	let exportSprite = new Sprite(renderTexture);
-	document.body.appendChild(app.renderer.plugins.extract.image(exportSprite));
-	
-	console.log(userImages.transform);
-	console.log(mask.transform);
-
-	//userImages.x += maskPosition.x;
-	//userImages.y += maskPosition.y;
-	//mask.x += maskPosition.x;
-	//mask.y += maskPosition.y;
 }
 
 function exportRender(){
@@ -470,13 +426,10 @@ function exportRender(){
 	//mask.y += maskPosition.y;
 }
 
-function createDashedLine(startPoint, endPoint){
+// Draws dashed line given a PIXI.Graphics object
+function DrawDashedLine(g,startPoint, endPoint){
 	let start = new Vector(startPoint.x,startPoint.y);
 	let end = new Vector(endPoint.x,endPoint.y);
-
-	let g = new PIXI.Graphics();
-	g.beginFill(0xFF0000);
-	g.lineStyle(1,0xFF0000);
 
 	let lineLength = 10;
 	let gap = 5;
@@ -486,11 +439,22 @@ function createDashedLine(startPoint, endPoint){
 	let totalLength = end.subtract(start).length();
 
 	while(drawnLength < totalLength){
-		let newStart = start.add(direction.multiply(lineLength));
+		let newStart = start.add(direction.multiply( Math.min(lineLength,totalLength-drawnLength) ));
 		g.drawPolygon([new Point(start.x,start.y),new Point(newStart.x,newStart.y)]);
 		start = newStart.add(direction.multiply(gap));
 		drawnLength += lineLength + gap;
 	}
+
+	return g;
+}
+
+// Creates a PIXI.Graphics object with a drawn dashed line
+function createDashedLine(startPoint, endPoint, lineWidth, lineColor){
+	let g = new PIXI.Graphics();
+	//g.beginFill(0xFF0000);
+	g.lineStyle(lineWidth,lineColor);
+	
+	DrawDashedLine(g,startPoint,endPoint);
 
 	return g;
 }
