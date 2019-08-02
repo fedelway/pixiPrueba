@@ -68,6 +68,7 @@ loader
 .add("res/buttonRestoreAspectRatio.png")
 .add("res/buttonRemoveBorder.png")
 .add("res/buttonGenerateRender.png")
+.add("res/buttonAddText.png")
 .load(setup);
 
 var meridian = new PIXI.Rectangle(app.renderer.width/2,0,1,app.renderer.height);
@@ -195,6 +196,14 @@ function setup() {
 			}
 		},
 		{
+			textureName: "res/buttonAddText.png",
+			setEvents: sprite => {
+				sprite.pointertap = e => {
+					addText();
+				}
+			}
+		},
+		{
 			textureName: "res/buttonGenerateRender.png",
 			setEvents: sprite => {
 				sprite.pointertap = e => {
@@ -208,10 +217,12 @@ function setup() {
 }
 
 function addButtons(textureArray){
-
 	let totalX = 0;
+	//Button width. Assumes buttons all have the same width
+	let buttonWidth = app.renderer.width / textureArray.length;
 	textureArray.forEach( tex => {
 		let newButton = new Sprite(resources[tex.textureName].texture);
+		resizeWidth(newButton,buttonWidth);
 		newButton.x = totalX;
 		totalX += newButton.width;
 		newButton.y = app.renderer.height - newButton.height;
@@ -334,11 +345,30 @@ function onDragMove(event)
 	}
 }
 
+function addText(){
+	let txt = prompt("Ingrese el texto","Your Text");
+
+	//prompt cancelled or no input
+	if(txt === null || txt === ""){
+		return;
+	}
+
+	let textSprite = new PIXI.Text(txt,
+		{
+			fontFamily: 'Arial',
+			fontSize: 24,
+			fill: 0xff1010,
+			align: 'center'
+		});
+	
+	initUserImage(textSprite);
+}
+
 //Scaling now working!!!!
 function exportRender(){
 	console.log('Export render');
 
-	let resolution = {width: 800, height: 800}
+	let resolution = {width: 1024, height: 1024}
 	// res / ScaledLimitSide
 	let xScaling = resolution.width / (limit.originalSideLength * config.scaling);
 	let yScaling = resolution.height / (limit.originalSideLength * config.scaling);
@@ -406,26 +436,13 @@ function handleFileSelect(evt) {
 		newLoader.add(reader.result)
 		.load( () => {
 			let newSprite = new PIXI.Sprite(newLoader.resources[reader.result].texture);
-			resizeHeight(newSprite, 200);
-			setInCenter(newSprite);
-			makeDraggable(newSprite);
-			newSprite.zIndex = app.stage.maxZ;
-			//newSprite.mask = mask;
 			newSprite.originalData = {
 				aspectRatio: getAspectRatio(newSprite),
 				width: newSprite.width,
 				height: newSprite.height
 			}
-			newSprite.originalAspectRatio = getAspectRatio(newSprite);
-
-			//For debugging position
-			newSprite.interactive = true;
-			newSprite.on('pointerover', (e) =>{
-				console.log(e.data.global);
-			});
-
-			userImages.addChild(newSprite);
-			selectedSprite = newSprite;
+			resizeHeight(newSprite, 200);
+			initUserImage(newSprite);
 		});
 	};
 	// Read in the image file as a binary string.
@@ -433,6 +450,16 @@ function handleFileSelect(evt) {
 
 	//Chrome only fires the event if the file selected is different, so just empty the value to upload same pic multiple times.
 	document.getElementById('fileInput').value = '';
+}
+
+function initUserImage(img){
+	setInCenter(img);
+	img.y = horizontal.y - img.height/2;
+	makeDraggable(img);
+	img.zIndex = app.stage.maxZ;
+
+	userImages.addChild(img);
+	selectedSprite = img;
 }
 
 // Draws dashed line given a PIXI.Graphics object
@@ -460,7 +487,6 @@ function DrawDashedLine(g,startPoint, endPoint){
 // Creates a PIXI.Graphics object with a drawn dashed line
 function createDashedLine(startPoint, endPoint, lineWidth, lineColor){
 	let g = new PIXI.Graphics();
-	//g.beginFill(0xFF0000);
 	g.lineStyle(lineWidth,lineColor);
 	
 	DrawDashedLine(g,startPoint,endPoint);
