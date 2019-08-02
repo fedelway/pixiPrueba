@@ -69,6 +69,7 @@ loader
 .add("res/buttonRemoveBorder.png")
 .add("res/buttonGenerateRender.png")
 .add("res/buttonAddText.png")
+.add("res/buttonMoveBack.png")
 .load(setup);
 
 var meridian = new PIXI.Rectangle(app.renderer.width/2,0,1,app.renderer.height);
@@ -184,6 +185,15 @@ function setup() {
 							selectedSprite.width = selectedSprite.originalData.aspectRatio * selectedSprite.height;
 						else selectedSprite.height = selectedSprite.width / selectedSprite.originalData.aspectRatio;
 					}
+				}
+			}
+		},
+		{
+			textureName: "res/buttonMoveBack.png",
+			setEvents: sprite => {
+				sprite.pointertap = e => {
+					if(selectedSprite)
+						selectedSprite.zIndex = Math.min.apply(Math,userImages.children.map(s => s.zIndex)) - 1;
 				}
 			}
 		},
