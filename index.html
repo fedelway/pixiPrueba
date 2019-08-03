@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <title>Hello World</title>
+
+  <link rel="stylesheet" type="text/css" href="style.css" />
 </head>
 <!--Version dev: 
   <script src="https://pixijs.download/dev/pixi.js" ></script>
@@ -12,12 +14,61 @@
 -->
 <script src="pixi/pixi.dev.js"></script>
 <script src="pixi/vector.js"></script>
+<script src="pixi/jscolor.js"></script>
 <body>
-  <style>* {padding: 10; margin: 10}</style>
   <form>
     <input type="file" id="fileInput"/>
   </form>
   <a id="download_render" download="render.png" href="" >LINK</a>
-  <script src="src/main.js"></script>  
+
+  <div id="TextMaker" class="TextMaker">
+      <!-- Aca va el combo de fuentes -->
+      <input id="TextMaker-text" type="text" value="Tu Texto" /> <br/>
+      <input id="TextMaker-color" class="jscolor" value="FF0000"/> <br/>
+
+      <select id="TextMaker-font-family">
+        <option value="Arial">Arial</option>
+        <option value="Arial Black">Arial Black</option>
+        <option value="Comic Sans MS">Comic Sans MS</option>
+        <option value="Courier New">Courier New</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Helvetica">Helvetica</option>
+        <option value="Impact">Impact</option>
+        <option value="Tahoma">Tahoma</option>
+        <option value="Times New Roman">Times New Roman</option>
+        <option value="Verdana">Verdana</option>
+      </select>
+
+      
+      <select id="TextMaker-font-weight">
+          <option value="normal">normal</option>
+          <option value="bold">negrita</option>
+          <option value="bolder">más negrita</option>
+          <option value="lighter">liviana</option>
+        </select>
+      <select id="TextMaker-font-style">
+        <option value="normal">normal</option>
+        <option value="italic">itálica</option>
+        <option value="oblique">oblicua</option>
+      </select>
+      <select id="TextMaker-font-variant">
+        <option value="normal">normal</option>
+        <option value="small-caps">small-caps</option>
+      </select>
+
+      <input id="TextMaker-stroke-color" class="jscolor" value="000000"/> <br/>
+      <input id="TextMaker-stroke-thickness" type="number" value="0" min="0" step="0.1"/>
+
+      <input id="TextMaker-shadow-enabled" type="checkbox"/>
+      <input id="TextMaker-shadow-color" class="jscolor" value="000000"/>
+      <input id="TextMaker-shadow-alpha" type="number" value="1" min="0" max="1" step="0.01"/>
+      <input id="TextMaker-shadow-blur" type="number" value="0" min="0"/>
+      <input id="TextMaker-shadow-distance" type="number" value="7" />
+
+      <button id="TextMaker-confirm">OK</button>
+  </div>
+  
+  <script src="src/main.js"></script>
+
 </body>
 </html>

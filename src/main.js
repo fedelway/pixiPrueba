@@ -15,6 +15,7 @@ var limit; //Area to draw
 var middleLine;
 var horizontalLine;
 var userImages;
+var textPreview;
 
 //Configuration
 var config = {
@@ -75,9 +76,20 @@ loader
 var meridian = new PIXI.Rectangle(app.renderer.width/2,0,1,app.renderer.height);
 var horizontal;
 
+//File input
 document.getElementById('fileInput').hidden = true;
 document.getElementById('fileInput').addEventListener('change', handleFileSelect, false);
+//Download link
 document.getElementById('download_render').hidden = true;
+//TextMaker
+document.getElementById('TextMaker').hidden = true;
+{
+	let txtmkrchildren = document.getElementById('TextMaker').children;
+	for(let i = 0; i<txtmkrchildren.length;i++){
+		txtmkrchildren[i].addEventListener('change', handleTextMakerChange);
+	}
+}
+document.getElementById('TextMaker-confirm').addEventListener('click', textInputConfirmation);
 
 //This 'setup' function will run when the images have loaded
 function setup() {
@@ -209,7 +221,8 @@ function setup() {
 			textureName: "res/buttonAddText.png",
 			setEvents: sprite => {
 				sprite.pointertap = e => {
-					addText();
+					showTextMaker();
+					userImages.removeChild(textPreview);
 				}
 			}
 		},
@@ -372,6 +385,64 @@ function addText(){
 		});
 	
 	initUserImage(textSprite);
+}
+
+function showTextMaker(){
+	let element = document.getElementById('TextMaker');
+	element.hidden = !element.hidden;
+}
+
+function handleTextMakerChange(){
+	userImages.removeChild(textPreview);
+	textPreview = createText();
+}
+
+function textInputConfirmation(){
+	userImages.removeChild(textPreview);
+	createText();
+
+	document.getElementById('TextMaker').hidden = true;
+}
+
+function createText(){
+	let txt = document.getElementById('TextMaker-text').value;
+	let color = parseInt(document.getElementById('TextMaker-color').value,16);
+
+	let fontFamily = document.getElementById('TextMaker-font-family').value;
+	let fontStyle = document.getElementById('TextMaker-font-style').value;
+	let fontVariant = document.getElementById('TextMaker-font-variant').value;
+	let fontWeight = document.getElementById('TextMaker-font-weight').value;
+
+	let strokeColor = parseInt(document.getElementById('TextMaker-stroke-color').value,16);
+	let strokeThickness = parseInt(document.getElementById('TextMaker-stroke-thickness').value)
+
+	let shadowEnabled = document.getElementById('TextMaker-shadow-enabled').checked;
+	let shadowColor = parseInt(document.getElementById('TextMaker-shadow-color').value,16);
+	let shadowAlpha = parseFloat(document.getElementById('TextMaker-shadow-alpha').value);
+	let shadowBlur = parseInt(document.getElementById('TextMaker-shadow-blur').value);
+	let shadowDistance = parseInt(document.getElementById('TextMaker-shadow-distance').value);
+
+	let textOptions = {
+		fontFamily: fontFamily,
+		fill: color,
+		align: 'center',
+		fontStyle: fontStyle,
+		fontVariant: fontVariant,
+		fontWeight: fontWeight,
+		stroke: strokeColor,
+		strokeThickness: strokeThickness,
+		dropShadow: shadowEnabled,
+		dropShadowColor: shadowColor,
+		dropShadowAlpha: shadowAlpha,
+		dropShadowBlur: shadowBlur,
+		dropShadowDistance: shadowDistance
+	};
+
+	let textSprite = new PIXI.Text(txt,textOptions);
+	initUserImage(textSprite);
+	textSprite.resolution = 5;
+
+	return textSprite;
 }
 
 //Scaling now working!!!!

@@ -1,0 +1,6 @@
+* {padding: 10; margin: 10}
+
+#TextMaker {
+    position: absolute;
+    z-index: 2;
+}
