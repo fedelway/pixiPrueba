@@ -87,6 +87,7 @@ document.getElementById('TextMaker').hidden = true;
 	let txtmkrchildren = document.getElementById('TextMaker').children;
 	for(let i = 0; i<txtmkrchildren.length;i++){
 		txtmkrchildren[i].addEventListener('change', handleTextMakerChange);
+		txtmkrchildren[i].addEventListener('keyup', handleTextMakerChange);
 	}
 }
 document.getElementById('TextMaker-confirm').addEventListener('click', textInputConfirmation);
@@ -221,8 +222,8 @@ function setup() {
 			textureName: "res/buttonAddText.png",
 			setEvents: sprite => {
 				sprite.pointertap = e => {
+					app.stage.removeChild(textPreview);
 					showTextMaker();
-					userImages.removeChild(textPreview);
 				}
 			}
 		},
@@ -266,6 +267,11 @@ function renderLoop(delta){
 function setInCenter(element){
 	element.position.x = app.renderer.width / 2 - element.width/2;
 	element.position.y = app.renderer.height / 2 - element.height/2;
+}
+
+function setInCenterDrawingArea(element){
+	element.position.x = app.renderer.width / 2 - element.width /2;
+	element.position.y = horizontal.y - element.height/2;
 }
 
 function collisionPointRect(sprite, line){
@@ -390,22 +396,31 @@ function addText(){
 function showTextMaker(){
 	let element = document.getElementById('TextMaker');
 	element.hidden = !element.hidden;
+	//Trigger a change if text creation dialog is shown
+	if(!element.hidden){
+		handleTextMakerChange();
+	}
 }
 
 function handleTextMakerChange(){
-	userImages.removeChild(textPreview);
+	app.stage.removeChild(textPreview);
 	textPreview = createText();
+	setInCenterDrawingArea(textPreview);
+
+	app.stage.addChild(textPreview);
 }
 
 function textInputConfirmation(){
-	userImages.removeChild(textPreview);
-	createText();
+	app.stage.removeChild(textPreview);
+	let text = createText();
+	initUserImage(text);
 
 	document.getElementById('TextMaker').hidden = true;
 }
 
 function createText(){
 	let txt = document.getElementById('TextMaker-text').value;
+	let txtAlignment = document.getElementById('TextMaker-text-alignment').value;
 	let color = parseInt(document.getElementById('TextMaker-color').value,16);
 
 	let fontFamily = document.getElementById('TextMaker-font-family').value;
@@ -418,6 +433,7 @@ function createText(){
 
 	let shadowEnabled = document.getElementById('TextMaker-shadow-enabled').checked;
 	let shadowColor = parseInt(document.getElementById('TextMaker-shadow-color').value,16);
+	let shadowAngle = parseInt(document.getElementById('TextMaker-shadow-angle').value);
 	let shadowAlpha = parseFloat(document.getElementById('TextMaker-shadow-alpha').value);
 	let shadowBlur = parseInt(document.getElementById('TextMaker-shadow-blur').value);
 	let shadowDistance = parseInt(document.getElementById('TextMaker-shadow-distance').value);
@@ -425,7 +441,7 @@ function createText(){
 	let textOptions = {
 		fontFamily: fontFamily,
 		fill: color,
-		align: 'center',
+		align: txtAlignment,
 		fontStyle: fontStyle,
 		fontVariant: fontVariant,
 		fontWeight: fontWeight,
@@ -433,14 +449,19 @@ function createText(){
 		strokeThickness: strokeThickness,
 		dropShadow: shadowEnabled,
 		dropShadowColor: shadowColor,
+		dropShadowAngle: shadowAngle,
 		dropShadowAlpha: shadowAlpha,
 		dropShadowBlur: shadowBlur,
 		dropShadowDistance: shadowDistance
 	};
 
 	let textSprite = new PIXI.Text(txt,textOptions);
-	initUserImage(textSprite);
-	textSprite.resolution = 5;
+	textSprite.resolution = 10;
+	textSprite.originalData = {
+		aspectRatio: getAspectRatio(textSprite),
+		width: textSprite.width,
+		height: textSprite.height
+	};
 
 	return textSprite;
 }
@@ -534,8 +555,9 @@ function handleFileSelect(evt) {
 }
 
 function initUserImage(img){
-	setInCenter(img);
-	img.y = horizontal.y - img.height/2;
+	setInCenterDrawingArea(img);
+	//setInCenter(img);
+	//img.y = horizontal.y - img.height/2;
 	makeDraggable(img);
 	img.zIndex = app.stage.maxZ;
 
