@@ -460,7 +460,8 @@ function createText(){
 	textSprite.originalData = {
 		aspectRatio: getAspectRatio(textSprite),
 		width: textSprite.width,
-		height: textSprite.height
+		height: textSprite.height,
+		isImage: false
 	};
 
 	return textSprite;
@@ -470,7 +471,16 @@ function createText(){
 function exportRender(){
 	console.log('Export render');
 
-	let resolution = {width: 1024, height: 1024}
+	let min = 9999999;
+	userImages.children.forEach(c => {
+		console.log(c.originalData);
+		if( c.originalData.isImage && Math.min(c.originalData.width,c.originalData.height) < min){
+			min = Math.min(c.originalData.width,c.originalData.height);
+		}
+	});
+	min = Math.max(1024,min);
+	let resolution = {width: min, height: min};
+
 	// res / ScaledLimitSide
 	let xScaling = resolution.width / (limit.originalSideLength * config.scaling);
 	let yScaling = resolution.height / (limit.originalSideLength * config.scaling);
@@ -541,7 +551,8 @@ function handleFileSelect(evt) {
 			newSprite.originalData = {
 				aspectRatio: getAspectRatio(newSprite),
 				width: newSprite.width,
-				height: newSprite.height
+				height: newSprite.height,
+				isImage: true
 			}
 			resizeHeight(newSprite, 200);
 			initUserImage(newSprite);
