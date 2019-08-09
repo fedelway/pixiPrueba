@@ -16,12 +16,14 @@ var middleLine;
 var horizontalLine;
 var userImages;
 var textPreview;
+var selectedRes;
 
 //Configuration
 var config = {
 	resizeAmmount: 10,
 	bigMovementAmmount: 10,
-	scaling: 0.9 * 0.63
+	scaling: 0.9 * 0.63,
+	minRes: 2952
 }
 
 //Create aliases
@@ -57,11 +59,10 @@ app.stage.maxZ = 0;
 
 //load resources asynchronously and execute setup when done
 loader
-.add("res/cat.png")
 .add("res/remera.png")
-.add("res/remera-2.png")
-.add("res/limit.png")
-.add("res/mask.jpg")
+.add("res/buttonLowRes.png")
+.add("res/buttonMediumRes.png")
+.add("res/buttonHighRes.png")
 .add("res/buttonLoad.png")
 .add("res/buttonSizeUp.png")
 .add("res/buttonSizeDown.png")
@@ -71,7 +72,7 @@ loader
 .add("res/buttonGenerateRender.png")
 .add("res/buttonAddText.png")
 .add("res/buttonMoveBack.png")
-.load(setup);
+.load(createResSelectionScreen);
 
 var meridian = new PIXI.Rectangle(app.renderer.width/2,0,1,app.renderer.height);
 var horizontal;
@@ -95,7 +96,7 @@ document.getElementById('TextMaker-confirm').addEventListener('click', textInput
 //This 'setup' function will run when the images have loaded
 function setup() {
 	//Create the sprites
-	let remera = new Sprite(resources["res/remera-2.png"].texture);
+	let remera = new Sprite(resources["res/remera.png"].texture);
 
 	//Create the limit: a square dashedLine
 	let sideLength = 348;
@@ -467,6 +468,95 @@ function createText(){
 	return textSprite;
 }
 
+function createResSelectionScreen(){
+	lowRes = new PIXI.Sprite(resources["res/buttonLowRes.png"].texture);
+	mediumRes = new PIXI.Sprite(resources["res/buttonMediumRes.png"].texture);
+	highRes = new PIXI.Sprite(resources["res/buttonHighRes.png"].texture);
+
+	let createButton = (h,w,text) => {
+		let but = new PIXI.Container();
+
+		let back = new PIXI.Graphics();
+		back.beginFill(0xFFFFFF,1);
+		back.drawRect(0,0,h,w);
+
+		let txtSprite = new PIXI.Text(
+			text,
+			{
+				fontFamily: 'Arial',
+				fontSize: 16,
+				fill: 0xff1010,
+				align: 'center',
+				fontWeight: 'bold'
+			});
+
+		txtSprite.x = w/2 - txtSprite.width;
+		txtSprite.y = h/2 - txtSprite.height;
+		
+		but.addChild(back);
+		but.addChild(txtSprite);
+
+		return but;
+	};
+
+	let margin = 25;
+	let buttonWidth = 250;
+	
+	resizeWidth(lowRes,buttonWidth);
+	resizeWidth(mediumRes,buttonWidth);
+	resizeWidth(highRes,buttonWidth);
+
+	let screen = new PIXI.Container();
+
+	//Graphics to draw the screen
+	let background = new PIXI.Graphics();
+	//White
+	background.beginFill(0xFFFFFF,1);
+	background.drawRect(0,0,buttonWidth*3 + margin*4,margin*2 + lowRes.height);
+
+	screen.addChild(background);
+
+	//resizeWidth(lowRes,buttonWidth);
+	//resizeWidth(mediumRes,buttonWidth);
+	//resizeWidth(highRes,buttonWidth);
+
+	lowRes.position.x = margin;
+	lowRes.position.y = margin;
+
+	mediumRes.position.x = margin + buttonWidth + margin;
+	mediumRes.position.y = margin;
+
+	highRes.position.x = margin + buttonWidth + margin + buttonWidth + margin;
+	highRes.position.y = margin;
+
+	let tapEvent = function(res){
+		return e => {
+			config.minRes = res;
+			selectedRes = {width: res, height: res};
+			app.stage.removeChild(screen);
+			setup();
+		};
+	};
+
+	lowRes.interactive = true; lowRes.buttonMode = true;
+	lowRes.pointertap = tapEvent(984);
+	mediumRes.interactive = true; mediumRes.buttonMode = true;
+	mediumRes.pointertap = tapEvent(1968);
+	highRes.interactive = true; highRes.buttonMode = true;
+	highRes.pointertap= tapEvent(2952);
+
+	screen.addChild(lowRes);
+	screen.addChild(mediumRes);
+	screen.addChild(highRes);
+
+	app.render();
+
+	screen.position.x = app.renderer.width / 2 - screen.width/2;
+	screen.position.y = app.renderer.height / 2 - screen.height/2;
+
+	app.stage.addChild(screen);
+}
+
 //Scaling now working!!!!
 function exportRender(){
 	console.log('Export render');
@@ -478,7 +568,7 @@ function exportRender(){
 			min = Math.min(c.originalData.width,c.originalData.height);
 		}
 	});
-	min = Math.max(1024,min);
+	min = Math.max(config.minRes,min);
 	let resolution = {width: min, height: min};
 
 	// res / ScaledLimitSide
@@ -554,6 +644,16 @@ function handleFileSelect(evt) {
 				height: newSprite.height,
 				isImage: true
 			}
+
+			if(Math.min(newSprite.width,newSprite.height) < config.minRes){
+				let confirmation = confirm('La imagen que introdujiste tiene una resolucion de: ' + newSprite.width + ' x ' + newSprite.height + '. ' +
+				'La resolución mínima para asegurarse una buena calidad de impresión es de ' + config.minRes + ' x ' + config.minRes + '.\n' +
+				 '¿Realmente desea utilizar esta imagen?');
+
+				 if(!confirmation)
+				 	return;
+			}
+
 			resizeHeight(newSprite, 200);
 			initUserImage(newSprite);
 		});
